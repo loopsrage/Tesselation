@@ -102,8 +102,8 @@ Shader "Tesselation/Triangle_Tesselation" {
     		}
 			float4 MorphVertex(float4 v, float4 wp){
 				v.y += sin(_Speed * _Time.y + -dot(v,v) * _Amplitude) * _Distance * _Amount;
-				v.y += sin(dot(v.y,v.y) * dot(v.x,v.z) * dot(v.y,v.y));
-				v.y += sin(-dot(wp,wp) * _Time.y) * 0.01 ;
+				v += sin(_Speed * _Time.y + lerp(-dot(v,v),sin(-dot(v,v)),-dot(v,v)) * _Amplitude) * 0.01;
+				v += sin(_Speed * _Time.y + -dot(v,v) * _Amplitude) * 0.2;
 				return v;
 			}
     		[domain("tri")]
@@ -121,7 +121,7 @@ Shader "Tesselation/Triangle_Tesselation" {
 				float4 p = float4(pos,1);
 				float4 WorldPos = mul(unity_ObjectToWorld,p);
 				p = MorphVertex(p,WorldPos);
-				Output.normal = dot(p,p);
+				Output.normal = p * 0.01;
 				Output.WorldPos = WorldPos;
         		Output.pos = UnityObjectToClipPos (p); 
            
@@ -133,7 +133,7 @@ Shader "Tesselation/Triangle_Tesselation" {
     		{
         		FS_Output Output;
 				// tex2D(_MainTex,I.normal);
-       			Output.color = tex2D(_MainTex,I.normal * 100);
+       			Output.color = tex2D(_MainTex,I.normal);
 				Output.color.a = _Transparency;
        			return Output;
     		}
