@@ -7,7 +7,9 @@ Shader "Tesselation/Triangle_Tesselation" {
 		_Transparency("Transparency", range(0,1)) = 0.6
 		_Speed("Speed", float) = 1
 		_Amplitude("Amplitude",float) = 1
+		_SubWaveAmplitude("Sub Wave Amplitude",range(0,100)) = 1
 		_Distance("Distance", float) = 1
+		_SubWaveDistance("Sub Wave Distance", range(0,1)) = 0.3
 		_Amount("Amount", float) = 1
     }
     SubShader {
@@ -34,7 +36,9 @@ Shader "Tesselation/Triangle_Tesselation" {
 			sampler2D _MainTex;
 			float _Speed;
 			float _Amplitude;
+			float _SubWaveAmplitude;
 			float _Distance;
+			float _SubWaveDistance;
 			float _Amount;
     		struct VS_Input
     		{
@@ -102,8 +106,8 @@ Shader "Tesselation/Triangle_Tesselation" {
     		}
 			float4 MorphVertex(float4 v, float4 wp){
 				v.y += sin(_Speed * _Time.y + -dot(v,v) * _Amplitude) * _Distance * _Amount;
-				v += sin(_Speed * _Time.y + lerp(-dot(v,v),sin(-dot(v,v)),-dot(v,v)) * _Amplitude) * 0.01;
-				v += sin(_Speed * _Time.y + -dot(v,v) * _Amplitude) * 0.2;
+				v += sin(_Time.y + mul(dot(v,v),dot(v,v)) * _SubWaveAmplitude) * 0.01;
+				v /= saturate(mul(v,v));
 				return v;
 			}
     		[domain("tri")]
@@ -121,7 +125,7 @@ Shader "Tesselation/Triangle_Tesselation" {
 				float4 p = float4(pos,1);
 				float4 WorldPos = mul(unity_ObjectToWorld,p);
 				p = MorphVertex(p,WorldPos);
-				Output.normal = p * 0.01;
+				Output.normal = mul(p.xyz,p.xyz);
 				Output.WorldPos = WorldPos;
         		Output.pos = UnityObjectToClipPos (p); 
            
