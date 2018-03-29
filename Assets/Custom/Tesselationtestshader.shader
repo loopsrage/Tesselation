@@ -1,5 +1,7 @@
 ﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
 Shader "Tesselation/Triangle_Tesselation" {
     Properties {
         _TessEdge ("Edge Tess", Range(1,64)) = 2
@@ -9,8 +11,9 @@ Shader "Tesselation/Triangle_Tesselation" {
 		_Amplitude("Amplitude",float) = 1
 		_SubWaveAmplitude("Sub Wave Amplitude",range(0,100)) = 1
 		_Distance("Distance", float) = 1
-		_SubWaveDistance("Sub Wave Distance", range(0,1)) = 0.3
+		_SubWaveSpeed("Sub Wave Speed", float) = 0.3
 		_Amount("Amount", float) = 1
+		_Color("Color", color) = (0,0,0,0)
     }
     SubShader {
     	Pass {
@@ -38,8 +41,9 @@ Shader "Tesselation/Triangle_Tesselation" {
 			float _Amplitude;
 			float _SubWaveAmplitude;
 			float _Distance;
-			float _SubWaveDistance;
+			float _SubWaveSpeed;
 			float _Amount;
+			float4 _Color;
     		struct VS_Input
     		{
         		float3 vertex : POSITION;
@@ -104,9 +108,30 @@ Shader "Tesselation/Triangle_Tesselation" {
         		Output.pos = Input[uCPID].pos.xyz;
         		return Output;
     		}
+			float4 hash(float2 v){
+				float4 h = dot(v,float2(127.1,311.7));
+				return frac(sin(h)*43758.5453123);
+			}
+			float noise(float2 v){
+				float2 i = floor(v);
+				float2 f = frac(v);
+				float2 u = f*f*(3.0-2.0*f);
+				return -1.0+2.0*lerp(lerp(hash(i + float2(0,0)),
+						hash(i + float2(1,0)), v.x),
+					lerp(hash(i + float2(0,1)),
+						hash(i + float2(1,1)), v.x),v.y);
+			}
+			float sea_octave(float2 uv, float choppy) {
+				uv += noise(uv);        
+				float2 wv = 1.0-abs(sin(uv));
+				float2 swv = abs(cos(uv));    
+				wv = lerp(wv,swv,wv);
+				return pow(1.0-pow(wv.x * wv.y,0.65),choppy);
+			}
+
 			float4 MorphVertex(float4 v, float4 wp){
 				v.y += sin(_Speed * _Time.y + -dot(v,v) * _Amplitude) * _Distance * _Amount;
-				v += sin(_Time.y + mul(dot(v,v),dot(v,v)) * _SubWaveAmplitude) * 0.01;
+				v += sin(_SubWaveSpeed * _Time.y + -dot(v,v) + sea_octave(dot(v,v),1) * _SubWaveAmplitude ) * 0.01;
 				v /= saturate(mul(v,v));
 				return v;
 			}
@@ -125,7 +150,7 @@ Shader "Tesselation/Triangle_Tesselation" {
 				float4 p = float4(pos,1);
 				float4 WorldPos = mul(unity_ObjectToWorld,p);
 				p = MorphVertex(p,WorldPos);
-				Output.normal = mul(p.xyz,p.xyz);
+				Output.normal = p;//dot(p,p);
 				Output.WorldPos = WorldPos;
         		Output.pos = UnityObjectToClipPos (p); 
            
@@ -137,6 +162,8 @@ Shader "Tesselation/Triangle_Tesselation" {
     		{
         		FS_Output Output;
 				// tex2D(_MainTex,I.normal);
+				I.normal = mul(UNITY_MATRIX_IT_MV, I.normal);
+				Output.color = mul(_WorldSpaceCameraPos,_Color);
        			Output.color = tex2D(_MainTex,I.normal);
 				Output.color.a = _Transparency;
        			return Output;
