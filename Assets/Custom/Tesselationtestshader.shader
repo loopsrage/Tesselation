@@ -131,7 +131,7 @@ Shader "Tesselation/Triangle_Tesselation" {
 
 			float4 MorphVertex(float4 v, float4 wp){
 				v.y += sin(_Speed * _Time.y + -dot(v,v) * _Amplitude) * _Distance * _Amount;
-				v += sin(_SubWaveSpeed * _Time.y + -dot(v,v) + sea_octave(dot(v,v),1) * _SubWaveAmplitude ) * 0.01;
+				v += sin(_SubWaveSpeed * _Time.y + -mul(dot(v,v),dot(v,v)) + sea_octave(dot(v,v),3) * _SubWaveAmplitude ) * 0.003;
 				v /= saturate(mul(v,v));
 				return v;
 			}
@@ -162,9 +162,9 @@ Shader "Tesselation/Triangle_Tesselation" {
     		{
         		FS_Output Output;
 				// tex2D(_MainTex,I.normal);
-				I.normal = mul(UNITY_MATRIX_IT_MV, I.normal);
-				Output.color = mul(_WorldSpaceCameraPos,_Color);
-       			Output.color = tex2D(_MainTex,I.normal);
+				I.normal = mul(sin(unity_OrthoParams), I.normal * 0.03);
+				_Color == mul(_WorldSpaceLightPos0,I.normal);
+       			Output.color = tex2D(_MainTex,I.normal) * _Color;
 				Output.color.a = _Transparency;
        			return Output;
     		}
